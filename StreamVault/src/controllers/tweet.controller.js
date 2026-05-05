@@ -7,18 +7,82 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 
 const createTweet = asyncHandler(async (req, res) => {
     //TODO: create tweet
+    const {content} = req.body
+    if(!content || content.trim() === ""){
+        throw new ApiError(400, "Content is required")
+    }
+
+    const userId = req.user._id
+
+    const createdTweet = await Tweet.create({
+        content:content.trim(),
+        owner:userId
+    })
+
+    return res
+    .status(201)
+    .json(new ApiResponse(201, createdTweet, "Tweet created successfully"));
 })
 
 const getUserTweets = asyncHandler(async (req, res) => {
     // TODO: get user tweets
+    const userId = req.user._id
+
+    const tweets = await Tweet.find({owner:userId}).sort({createdAt:-1}) 
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, tweets, "User tweets fetched successfully"));
 })
 
 const updateTweet = asyncHandler(async (req, res) => {
     //TODO: update tweet
+    const {tweetId} = req.params
+    const {content} = req.body
+
+    if(!isValidObjectId(tweetId)){
+        throw new ApiError(400, "Invalid tweet ID")
+    }
+
+    if(!content || content.trim() === ""){
+        throw new ApiError(400, "Content is required")
+    }
+
+    const updatedTweet = await Tweet.findOneAndUpdate(
+        {_id: tweetId, owner: req.user._id},
+        {content: content.trim()},
+        {new: true, runValidators: true}
+    )
+
+    if(!updatedTweet){
+        throw new ApiError(404, "Tweet not found")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"));
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
     //TODO: delete tweet
+    const {tweetId} = req.params
+
+    if(!isValidObjectId(tweetId)){
+        throw new ApiError(400, "Invalid tweet ID")
+    }
+
+    const deletedTweet = await Tweet.findOneAndDelete({
+        _id: tweetId,
+        owner: req.user._id
+    })
+
+    if(!deletedTweet){
+        throw new ApiError(404, "Tweet not found or unauthorized")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, deletedTweet, "Tweet deleted successfully"));
 })
 
 export {
